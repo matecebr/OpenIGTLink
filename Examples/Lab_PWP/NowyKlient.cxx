@@ -101,10 +101,51 @@ int main(int argc, char* argv[])
   // Send
   socket->Send(pointMsg->GetPackPointer(), pointMsg->GetPackSize());
   
+  igtl::MessageHeader::Pointer headerMsg;
+  headerMsg = igtl::MessageHeader::New();
+
+  while (true) {
+	  headerMsg->InitPack();
+	  int r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize());
+	  if (r != headerMsg->GetPackSize())
+	  {
+		  continue;
+	  }
+	  headerMsg->Unpack();
+	  ReceivePoint(socket, headerMsg);
+  }
   
   //------------------------------------------------------------
   // Close the socket
   socket->CloseSocket();
 
+  std::cerr << "Receiving POINT data type." << std::endl;
+
+  // Create a message buffer to receive transform data
+  igtl::PointMessage::Pointer pointMsg;
+  pointMsg = igtl::PointMessage::New();
+  pointMsg->SetMessageHeader(header);
+  pointMsg->AllocatePack();
+
+  // Receive transform data from the socket
+  socket->Receive(pointMsg->GetPackBodyPointer(), pointMsg->GetPackBodySize());
+
+  // Deserialize the transform data
+  // If you want to skip CRC check, call Unpack() without argument.
+  int c = pointMsg->Unpack(1);
+
+  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+  {
+	  int nElements = pointMsg->GetNumberOfPointElement();
+	  for (int i = 0; i < nElements; i++)
+	  {
+		  igtl::PointElement::Pointer pointElement;
+		  pointMsg->GetPointElement(i, pointElement);
+
+		  igtlUint8 rgba[4];
+		  pointElement->GetRGBA(rgba);
+
+		  igtlFloat32 pos[3];
+		  pointElement->GetPosition(pos);
 }
 

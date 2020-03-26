@@ -348,6 +348,10 @@ int ReceivePoint(igtl::Socket * socket, igtl::MessageHeader * header)
   pointMsg->SetMessageHeader(header);
   pointMsg->AllocatePack();
 
+  igtl::PointMessage::Pointer pointMsgSend;
+  pointMsgSend = igtl::PointMessage::New();
+  pointMsgSend->SetDeviceName("PointSender");
+
   // Receive transform data from the socket
   socket->Receive(pointMsg->GetPackBodyPointer(), pointMsg->GetPackBodySize());
 
@@ -377,8 +381,28 @@ int ReceivePoint(igtl::Socket * socket, igtl::MessageHeader * header)
       std::cerr << " Radius    : " << std::fixed << pointElement->GetRadius() << std::endl;
       std::cerr << " Owner     : " << pointElement->GetOwner() << std::endl;
       std::cerr << "================================" << std::endl;
-      }
-    }
+
+	  igtlFloat32 negpos[3];
+	  for (int j = 0; j < 3; j++) {
+		  negpos[j] = pos[j] * -1;
+	  }
+
+	  igtl::PointElement::Pointer negpoint;
+	  negpoint = igtl::PointElement::New();
+	  negpoint->SetName(pointElement->GetName());
+	  negpoint->SetGroupName(pointElement->GetGroupName());
+	  negpoint->SetRGBA(rgba);
+	  negpoint->SetPosition(negpos);
+	  negpoint->SetRadius(pointElement->GetRadius());
+	  negpoint->SetOwner(pointElement->GetOwner());
+
+
+	  pointMsgSend->AddPointElement(negpoint);
+	}
+	igtl::Sleep(5000);
+	pointMsgSend->Pack();
+	socket->Send(pointMsgSend->GetPackPointer(), pointMsgSend->GetPackSize());
+  }
 
   return 1;
 }
